@@ -12,6 +12,31 @@ const MapView: React.FC<MapViewProps> = ({ pins, onPinClick, onMapClick }) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const leafletMap = useRef<any>(null);
 
+  // Separate effect to handle resizing and animation timing
+  useEffect(() => {
+    if (!mapRef.current) return;
+    
+    const resizeObserver = new ResizeObserver(() => {
+      if (leafletMap.current) {
+        leafletMap.current.invalidateSize();
+      }
+    });
+    
+    resizeObserver.observe(mapRef.current);
+    
+    // Force invalidation after CSS animation (duration-500) completes
+    const timer = setTimeout(() => {
+      if (leafletMap.current) {
+        leafletMap.current.invalidateSize();
+      }
+    }, 600);
+    
+    return () => {
+      resizeObserver.disconnect();
+      clearTimeout(timer);
+    };
+  }, []);
+
   useEffect(() => {
     const L = (window as any).L;
     if (!mapRef.current || !L) return;
@@ -35,7 +60,7 @@ const MapView: React.FC<MapViewProps> = ({ pins, onPinClick, onMapClick }) => {
       });
     }
 
-    // Zorg dat de kaart de container vult
+    // Zorg dat de kaart de container vult (immediate)
     leafletMap.current.invalidateSize();
 
     // Verwijder bestaande markers
