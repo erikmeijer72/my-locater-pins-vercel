@@ -189,7 +189,8 @@ const App: React.FC = () => {
         countryCode,
         date: now.toLocaleDateString('nl-NL'),
         time: now.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }),
-        mapImageUrl
+        mapImageUrl,
+        note: ''
       };
 
       setLastCreatedPinId(newPinId);
@@ -211,6 +212,10 @@ const App: React.FC = () => {
     if (selectedMapPinId === id) {
       setSelectedMapPinId(null);
     }
+  };
+
+  const updatePinNote = (id: string, note: string) => {
+    setPins(prev => prev.map(p => (p.id === id ? { ...p, note } : p)));
   };
 
   const handleDeleteAll = useCallback(() => {
@@ -298,6 +303,7 @@ const App: React.FC = () => {
                   key={pin.id} 
                   pin={pin} 
                   onDelete={() => deletePin(pin.id)}
+                  onUpdateNote={updatePinNote}
                   forceCollapseSignal={globalCollapseSignal}
                   initiallyExpanded={pin.id === lastCreatedPinId}
                 />
@@ -326,6 +332,7 @@ const App: React.FC = () => {
                     <PinCard 
                       pin={selectedMapPin}
                       onDelete={() => deletePin(selectedMapPin.id)}
+                      onUpdateNote={updatePinNote}
                       forceCollapseSignal={false} // Always open
                       initiallyExpanded={true} // Always open
                     />

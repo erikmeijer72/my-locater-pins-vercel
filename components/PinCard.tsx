@@ -5,23 +5,29 @@ import { PinData } from '../types';
 interface PinCardProps {
   pin: PinData;
   onDelete: () => void;
+  onUpdateNote: (id: string, note: string) => void;
   forceCollapseSignal: boolean;
   initiallyExpanded?: boolean;
 }
 
-const PinCard: React.FC<PinCardProps> = ({ pin, onDelete, forceCollapseSignal, initiallyExpanded }) => {
+const PinCard: React.FC<PinCardProps> = ({ pin, onDelete, onUpdateNote, forceCollapseSignal, initiallyExpanded }) => {
   // Use initiallyExpanded if provided (for new pins), otherwise default to false
   const [isExpanded, setIsExpanded] = useState(initiallyExpanded || false);
+  const [noteText, setNoteText] = useState(pin.note || '');
   const prevSignalRef = useRef(forceCollapseSignal);
 
-  // Sync met globale inklap-signaal, maar alleen als de signal daadwerkelijk verandert.
-  // Dit voorkomt dat de standaard 'forceCollapseSignal=true' de nieuwe pin direct dichtgooit.
+  // Sync met globale inklap-signaal
   useEffect(() => {
     if (forceCollapseSignal !== prevSignalRef.current) {
       setIsExpanded(!forceCollapseSignal);
       prevSignalRef.current = forceCollapseSignal;
     }
   }, [forceCollapseSignal]);
+
+  // Sync local note text if pin data changes externally
+  useEffect(() => {
+    setNoteText(pin.note || '');
+  }, [pin.note]);
 
   const handleNavigate = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -33,7 +39,7 @@ const PinCard: React.FC<PinCardProps> = ({ pin, onDelete, forceCollapseSignal, i
     e.stopPropagation();
     const shareData = {
       title: 'Mijn Locatie Pin',
-      text: `Ik heb een locatie vastgelegd op ${pin.address}. Bekijk het hier:`,
+      text: `Ik heb een locatie vastgelegd op ${pin.address}.${pin.note ? `\nNotitie: ${pin.note}` : ''}`,
       url: `https://www.google.com/maps?q=${pin.latitude},${pin.longitude}`
     };
 
@@ -46,6 +52,12 @@ const PinCard: React.FC<PinCardProps> = ({ pin, onDelete, forceCollapseSignal, i
     } else {
       navigator.clipboard.writeText(`${shareData.text} ${shareData.url}`);
       alert('Link gekopieerd naar klembord!');
+    }
+  };
+
+  const handleNoteBlur = () => {
+    if (noteText !== pin.note) {
+      onUpdateNote(pin.id, noteText);
     }
   };
 
@@ -98,47 +110,60 @@ const PinCard: React.FC<PinCardProps> = ({ pin, onDelete, forceCollapseSignal, i
           </div>
 
           <div className="p-4">
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-col gap-3">
               
-              {/* Adres Text Area - Flex 1 allows it to take available space, min-w-0 prevents overflow */}
-              <div className="flex-1 min-w-0">
-                <p className="text-[10px] font-black text-red-600 uppercase tracking-[0.2em] mb-1">Adres</p>
-                <p className="text-xs text-slate-600 leading-relaxed font-bold line-clamp-2" title={pin.address}>
-                  {pin.address}
-                </p>
+              <div className="flex items-start justify-between gap-3">
+                {/* Adres Text Area */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] font-black text-red-600 uppercase tracking-[0.2em] mb-1">Adres</p>
+                  <p className="text-xs text-slate-600 leading-relaxed font-bold" title={pin.address}>
+                    {pin.address}
+                  </p>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex items-center gap-1 shrink-0 pt-2">
+                  <button 
+                    onClick={handleNavigate}
+                    title="Navigeer"
+                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-all active:scale-95"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                    </svg>
+                  </button>
+                  
+                  <button 
+                    onClick={handleShare}
+                    title="Deel"
+                    className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all active:scale-95"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                  </button>
+
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                    title="Verwijder"
+                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-all active:scale-95"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </div>
               </div>
 
-              {/* Action Buttons - Moved inline, prevent shrinking */}
-              <div className="flex items-center gap-1 shrink-0">
-                <button 
-                  onClick={handleNavigate}
-                  title="Navigeer"
-                  className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-all active:scale-95"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                  </svg>
-                </button>
-                
-                <button 
-                  onClick={handleShare}
-                  title="Deel"
-                  className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all active:scale-95"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                  </svg>
-                </button>
-
-                <button 
-                  onClick={(e) => { e.stopPropagation(); onDelete(); }}
-                  title="Verwijder"
-                  className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-all active:scale-95"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                </button>
+              {/* Notes Input Area */}
+              <div className="w-full">
+                <textarea
+                  value={noteText}
+                  onChange={(e) => setNoteText(e.target.value)}
+                  onBlur={handleNoteBlur}
+                  placeholder="Voeg een notitie toe..."
+                  className="w-full h-20 p-3 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-100 focus:border-red-300 transition-all resize-none text-slate-700 font-medium placeholder-slate-400"
+                />
               </div>
 
             </div>

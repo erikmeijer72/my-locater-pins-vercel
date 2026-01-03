@@ -9,6 +9,7 @@ export interface PinData {
   date: string;
   time: string;
   mapImageUrl: string;
+  note?: string;
 }
 
 export interface GeocodingResult {
