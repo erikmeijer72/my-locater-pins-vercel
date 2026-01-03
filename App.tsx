@@ -94,13 +94,10 @@ const App: React.FC = () => {
         return;
       }
 
-      // ROBUSTNESS UPDATE:
-      // 1. Allow cached positions (up to 30s old) for faster lock
-      // 2. Increase timeout to 15s to allow GPS warmup
       const options = {
         enableHighAccuracy: true,
-        maximumAge: 30000, 
-        timeout: 15000,
+        maximumAge: 0, 
+        timeout: 20000, // Verhoogd naar 20s
       };
 
       let bestPosition: GeolocationPosition | null = null;
@@ -121,44 +118,44 @@ const App: React.FC = () => {
         reject(err);
       };
 
-      // Hard limit timeout: stop waiting after 10 seconds
+      // Timeout handler
       const timeoutTimer = setTimeout(() => {
         if (bestPosition) {
-          // If we have any position found during watch, use it
+          // TIME-OUT: We hebben geen perfect signaal gevonden binnen de tijd.
+          // We accepteren nu de beste (mogelijk onnauwkeurige) locatie die we hebben.
+          // Dit voorkomt dat de gebruiker geblokkeerd wordt.
           finish(bestPosition);
         } else {
-          // FALLBACK: If no high accuracy position found, try low accuracy (Cell/WiFi)
-          // This prevents the "Could not get GPS lock" error indoors
-          navigator.geolocation.getCurrentPosition(
-            (pos) => finish(pos),
-            (err) => fail(new Error("Kon geen locatie bepalen. Controleer of locatievoorzieningen aan staan.")),
-            { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 }
-          );
+          fail(new Error("Geen GPS signaal ontvangen."));
         }
-      }, 10000);
+      }, 20000);
+
+      const startTime = Date.now();
 
       watchId = navigator.geolocation.watchPosition(
         (position) => {
+          // Filter uit extreem oude cached data
+          const dataAge = position.timestamp ? Date.now() - position.timestamp : 0;
+          if (dataAge > 60000) return; // Negeer data ouder dan 60s
+
           const accuracy = position.coords.accuracy;
           
-          // Keep the best accuracy found so far
+          // Houd de beste meting bij
           if (!bestPosition || accuracy < bestPosition.coords.accuracy) {
             bestPosition = position;
           }
 
-          // If we have good accuracy (< 40m), stop immediately
-          if (accuracy <= 40) {
+          // Strict success criteria voor snelle resolve (< 30m)
+          if (accuracy <= 30) {
             clearTimeout(timeoutTimer);
             finish(position);
           }
         },
         (error) => {
-          // Only fail immediately on permission denied
           if (error.code === error.PERMISSION_DENIED) {
             clearTimeout(timeoutTimer);
             fail(error);
           }
-          // For other errors (timeout/unavailable), we wait for the hard timeout fallback
         },
         options
       );
@@ -172,7 +169,7 @@ const App: React.FC = () => {
     try {
       // Gebruik de nieuwe 'smart' location functie
       const position = await getPreciseLocation();
-      const { latitude, longitude } = position.coords;
+      const { latitude, longitude, accuracy } = position.coords;
       const now = new Date();
       
       const geoRes = await fetch(
@@ -197,18 +194,25 @@ const App: React.FC = () => {
 
       const mapImageUrl = `https://static-maps.yandex.ru/1.x/?ll=${longitude},${latitude}&z=16&l=map&pt=${longitude},${latitude},pm2rdl&size=450,300`;
 
+      // Auto-note als de accuratesse slecht is (> 1000m)
+      let initialNote = '';
+      if (accuracy > 1000) {
+        const kmOff = Math.round(accuracy / 1000);
+        initialNote = `⚠️ Onnauwkeurig signaal (~${kmOff}km afwijking)`;
+      }
+
       const newPinId = crypto.randomUUID();
       const newPin: PinData = {
         id: newPinId,
         latitude,
         longitude,
-        address, // Nu verkort
+        address, 
         city,
         countryCode,
         date: now.toLocaleDateString('nl-NL'),
         time: now.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }),
         mapImageUrl,
-        note: ''
+        note: initialNote
       };
 
       setLastCreatedPinId(newPinId);
