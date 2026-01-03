@@ -162,13 +162,6 @@ const Header: React.FC<HeaderProps> = ({ isAllCollapsed, onToggleAll, pins, onIm
                   </svg>
                   <span className="font-semibold">Importeer data</span>
                 </button>
-                <input 
-                  type="file" 
-                  ref={fileInputRef} 
-                  onChange={handleFileChange} 
-                  accept=".json" 
-                  className="hidden" 
-                />
                 
                 <button
                   onClick={handleExport}
@@ -198,6 +191,15 @@ const Header: React.FC<HeaderProps> = ({ isAllCollapsed, onToggleAll, pins, onIm
           )}
         </div>
       </div>
+      
+      {/* Hidden file input placed outside conditional rendering */}
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        onChange={handleFileChange} 
+        accept=".json" 
+        className="hidden" 
+      />
 
       {/* Custom Confirmation Modal */}
       {showConfirm && (
