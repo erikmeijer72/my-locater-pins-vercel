@@ -1,0 +1,7 @@
+{
+  "name": "My Locater Pins VERCEL",
+  "description": "A mobile-first location tracking app that captures GPS data, addresses, and map snapshots with a stylish blurred interface.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
