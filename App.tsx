@@ -94,53 +94,71 @@ const App: React.FC = () => {
         return;
       }
 
-      // SPEED OPTIMIZATION: 
-      // 1. Allow cached positions (up to 10s old)
-      // 2. Reduce timeout
+      // ROBUSTNESS UPDATE:
+      // 1. Allow cached positions (up to 30s old) for faster lock
+      // 2. Increase timeout to 15s to allow GPS warmup
       const options = {
         enableHighAccuracy: true,
-        maximumAge: 10000, // Accept cached positions up to 10s old
-        timeout: 10000,
+        maximumAge: 30000, 
+        timeout: 15000,
       };
 
       let bestPosition: GeolocationPosition | null = null;
       let watchId: number;
+      let hasResolved = false;
 
-      // Stop na 4 seconden maximaal (was 8) en neem wat we hebben
+      const finish = (pos: GeolocationPosition) => {
+        if (hasResolved) return;
+        hasResolved = true;
+        if (watchId !== undefined) navigator.geolocation.clearWatch(watchId);
+        resolve(pos);
+      };
+
+      const fail = (err: any) => {
+        if (hasResolved) return;
+        hasResolved = true;
+        if (watchId !== undefined) navigator.geolocation.clearWatch(watchId);
+        reject(err);
+      };
+
+      // Hard limit timeout: stop waiting after 10 seconds
       const timeoutTimer = setTimeout(() => {
-        navigator.geolocation.clearWatch(watchId);
         if (bestPosition) {
-          resolve(bestPosition);
+          // If we have any position found during watch, use it
+          finish(bestPosition);
         } else {
-          reject(new Error("Kon geen goede GPS lock krijgen. Probeer buiten te staan."));
+          // FALLBACK: If no high accuracy position found, try low accuracy (Cell/WiFi)
+          // This prevents the "Could not get GPS lock" error indoors
+          navigator.geolocation.getCurrentPosition(
+            (pos) => finish(pos),
+            (err) => fail(new Error("Kon geen locatie bepalen. Controleer of locatievoorzieningen aan staan.")),
+            { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 }
+          );
         }
-      }, 4000);
+      }, 10000);
 
       watchId = navigator.geolocation.watchPosition(
         (position) => {
           const accuracy = position.coords.accuracy;
           
-          // Bewaar deze positie als hij beter is dan wat we hadden
+          // Keep the best accuracy found so far
           if (!bestPosition || accuracy < bestPosition.coords.accuracy) {
             bestPosition = position;
           }
 
-          // SPEED OPTIMIZATION:
-          // Als we < 35m nauwkeurigheid hebben (was 10m), zijn we tevreden.
-          // Dit is veel sneller, vooral binnen of in de stad.
-          if (accuracy <= 35) {
+          // If we have good accuracy (< 40m), stop immediately
+          if (accuracy <= 40) {
             clearTimeout(timeoutTimer);
-            navigator.geolocation.clearWatch(watchId);
-            resolve(position);
+            finish(position);
           }
         },
         (error) => {
-          // Bij permission denied direct stoppen
+          // Only fail immediately on permission denied
           if (error.code === error.PERMISSION_DENIED) {
             clearTimeout(timeoutTimer);
-            navigator.geolocation.clearWatch(watchId);
-            reject(error);
+            fail(error);
           }
+          // For other errors (timeout/unavailable), we wait for the hard timeout fallback
         },
         options
       );

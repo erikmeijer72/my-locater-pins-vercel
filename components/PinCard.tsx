@@ -162,7 +162,8 @@ const PinCard: React.FC<PinCardProps> = ({ pin, onDelete, onUpdateNote, forceCol
                   onChange={(e) => setNoteText(e.target.value)}
                   onBlur={handleNoteBlur}
                   placeholder="Voeg een notitie toe..."
-                  className="w-full h-20 p-3 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-100 focus:border-red-300 transition-all resize-none text-slate-700 font-medium placeholder-slate-400"
+                  rows={1}
+                  className="w-full h-9 py-2 px-3 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-100 focus:border-red-300 transition-all resize-none text-slate-700 font-medium placeholder-slate-400"
                 />
               </div>
 
