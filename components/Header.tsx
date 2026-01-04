@@ -120,7 +120,11 @@ const Header: React.FC<HeaderProps> = ({ isAllCollapsed, onToggleAll, pins, onIm
         </h1>
         <div className="flex items-center gap-1.5 mt-2">
            <span className="w-1.5 h-1.5 bg-red-600 rounded-full animate-pulse shadow-[0_0_8px_rgba(220,38,38,0.5)]"></span>
-           <span className="text-[10px] uppercase tracking-[0.25em] font-black text-slate-400">Volgsysteem</span>
+           <span className="text-[10px] uppercase tracking-[0.25em] font-black text-slate-400 flex items-center">
+             Volgsysteem 
+             <span className="mx-1.5 text-slate-300 font-normal">|</span>
+             <span className="text-slate-600">{pins.length} {pins.length === 1 ? 'Pin' : 'Pins'}</span>
+           </span>
         </div>
       </div>
       

@@ -10,52 +10,39 @@ const App: React.FC = () => {
   const [pins, setPins] = useState<PinData[]>([]);
   const [isRecording, setIsRecording] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Start with true to ensure all cards are collapsed on open
   const [globalCollapseSignal, setGlobalCollapseSignal] = useState<boolean>(true);
   
-  // Initialize viewMode from localStorage, default to 'list'
   const [viewMode, setViewMode] = useState<'list' | 'map'>(() => {
     const savedMode = localStorage.getItem('locator_view_mode');
     return (savedMode === 'list' || savedMode === 'map') ? savedMode : 'list';
   });
   const [lastCreatedPinId, setLastCreatedPinId] = useState<string | null>(null);
-  
-  // Track selected pin in Map View
   const [selectedMapPinId, setSelectedMapPinId] = useState<string | null>(null);
 
-  // Auto-fullscreen logic: Attempt on load and on first interaction
+  // Optimized Fullscreen: only trigger on user gesture to avoid flicker on launch
   useEffect(() => {
-    const enterFullscreen = async () => {
+    const handleFirstInteraction = async () => {
       try {
         if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
           await document.documentElement.requestFullscreen();
         }
       } catch (e) {
-        // Browser prevented auto-fullscreen (likely needs user gesture)
-        // We will wait for the interaction listener
+        // Silent catch for browser restrictions
       }
+      // Only try once to avoid annoying the user
+      document.removeEventListener('click', handleFirstInteraction);
+      document.removeEventListener('touchstart', handleFirstInteraction);
     };
 
-    // Attempt immediately on mount
-    enterFullscreen();
-
-    // Also try on first user interaction as fallback
-    const handleInteraction = () => {
-      enterFullscreen();
-      document.removeEventListener('click', handleInteraction);
-      document.removeEventListener('touchstart', handleInteraction);
-    };
-
-    document.addEventListener('click', handleInteraction);
-    document.addEventListener('touchstart', handleInteraction);
+    document.addEventListener('click', handleFirstInteraction);
+    document.addEventListener('touchstart', handleFirstInteraction);
 
     return () => {
-      document.removeEventListener('click', handleInteraction);
-      document.removeEventListener('touchstart', handleInteraction);
+      document.removeEventListener('click', handleFirstInteraction);
+      document.removeEventListener('touchstart', handleFirstInteraction);
     };
   }, []);
 
-  // Laad opgeslagen pins van lokale opslag bij het laden
   useEffect(() => {
     const saved = localStorage.getItem('my_locater_pins');
     if (saved) {
@@ -67,26 +54,21 @@ const App: React.FC = () => {
     }
   }, []);
 
-  // Sla pins op in lokale opslag wanneer ze veranderen
   useEffect(() => {
     localStorage.setItem('my_locater_pins', JSON.stringify(pins));
   }, [pins]);
 
-  // Sla viewMode op in lokale opslag wanneer deze verandert
   useEffect(() => {
     localStorage.setItem('locator_view_mode', viewMode);
-    // Clear selection when switching modes
     setSelectedMapPinId(null);
   }, [viewMode]);
 
-  // Forceer lijstweergave als er geen pins zijn (voorkomt lege kaartweergave)
   useEffect(() => {
     if (pins.length === 0 && viewMode === 'map') {
       setViewMode('list');
     }
   }, [pins, viewMode]);
 
-  // Helper functie om de meest nauwkeurige locatie te verkrijgen
   const getPreciseLocation = () => {
     return new Promise<GeolocationPosition>((resolve, reject) => {
       if (!navigator.geolocation) {
@@ -97,7 +79,7 @@ const App: React.FC = () => {
       const options = {
         enableHighAccuracy: true,
         maximumAge: 0, 
-        timeout: 20000, // Verhoogd naar 20s
+        timeout: 20000,
       };
 
       let bestPosition: GeolocationPosition | null = null;
@@ -118,34 +100,24 @@ const App: React.FC = () => {
         reject(err);
       };
 
-      // Timeout handler
       const timeoutTimer = setTimeout(() => {
         if (bestPosition) {
-          // TIME-OUT: We hebben geen perfect signaal gevonden binnen de tijd.
-          // We accepteren nu de beste (mogelijk onnauwkeurige) locatie die we hebben.
-          // Dit voorkomt dat de gebruiker geblokkeerd wordt.
           finish(bestPosition);
         } else {
           fail(new Error("Geen GPS signaal ontvangen."));
         }
       }, 20000);
 
-      const startTime = Date.now();
-
       watchId = navigator.geolocation.watchPosition(
         (position) => {
-          // Filter uit extreem oude cached data
           const dataAge = position.timestamp ? Date.now() - position.timestamp : 0;
-          if (dataAge > 60000) return; // Negeer data ouder dan 60s
+          if (dataAge > 60000) return;
 
           const accuracy = position.coords.accuracy;
-          
-          // Houd de beste meting bij
           if (!bestPosition || accuracy < bestPosition.coords.accuracy) {
             bestPosition = position;
           }
 
-          // Strict success criteria voor snelle resolve (< 30m)
           if (accuracy <= 30) {
             clearTimeout(timeoutTimer);
             finish(position);
@@ -167,7 +139,6 @@ const App: React.FC = () => {
     setError(null);
 
     try {
-      // Gebruik de nieuwe 'smart' location functie
       const position = await getPreciseLocation();
       const { latitude, longitude, accuracy } = position.coords;
       const now = new Date();
@@ -183,7 +154,6 @@ const App: React.FC = () => {
       const city = geoData.address.city || geoData.address.town || geoData.address.village || "Onbekende Stad";
       const countryCode = geoData.address.country_code?.toUpperCase() || "UN";
 
-      // Verkort adres: Straat Huisnummer, Plaats
       let address = geoData.display_name;
       if (geoData.address.road) {
         address = `${geoData.address.road} ${geoData.address.house_number || ''}`.trim();
@@ -194,7 +164,6 @@ const App: React.FC = () => {
 
       const mapImageUrl = `https://static-maps.yandex.ru/1.x/?ll=${longitude},${latitude}&z=16&l=map&pt=${longitude},${latitude},pm2rdl&size=450,300`;
 
-      // Auto-note als de accuratesse slecht is (> 1000m)
       let initialNote = '';
       if (accuracy > 1000) {
         const kmOff = Math.round(accuracy / 1000);
@@ -242,13 +211,12 @@ const App: React.FC = () => {
 
   const handleDeleteAll = useCallback(() => {
     setPins([]);
-    localStorage.removeItem('my_locater_pins'); // Direct remove to be safe
-    setViewMode('list'); // Reset view to list
+    localStorage.removeItem('my_locater_pins');
+    setViewMode('list');
     setSelectedMapPinId(null);
   }, []);
 
   const handleImportPins = (newPins: PinData[]) => {
-    // Merge without duplicates based on ID or just add all
     setPins(prev => {
       const existingIds = new Set(prev.map(p => p.id));
       const uniqueNewPins = newPins.filter(p => !existingIds.has(p.id));
@@ -256,16 +224,15 @@ const App: React.FC = () => {
     });
   };
 
-  // Derived state for the selected map pin
   const selectedMapPin = useMemo(() => {
     return pins.find(p => p.id === selectedMapPinId);
   }, [pins, selectedMapPinId]);
 
   return (
-    <div className="relative h-screen w-full flex flex-col overflow-hidden bg-slate-50">
-      <div className="fixed inset-0 blurry-map z-0"></div>
+    <div className="relative min-h-screen w-full flex flex-col overflow-hidden">
+      {/* Background is now in index.html to avoid white flash */}
       
-      <div className="relative z-10 flex flex-col h-full bg-white/30 backdrop-blur-[2px]">
+      <div className="relative z-10 flex flex-col h-screen bg-white/30 backdrop-blur-[2px]">
         <Header 
           isAllCollapsed={globalCollapseSignal} 
           onToggleAll={() => setGlobalCollapseSignal(!globalCollapseSignal)} 
@@ -274,7 +241,6 @@ const App: React.FC = () => {
           onDeleteAll={handleDeleteAll}
         />
         
-        {/* Weergave schakelaar Toolbar */}
         <div className="px-6 pb-6 flex justify-center sticky top-[100px] z-20">
           <div className="bg-white/80 backdrop-blur-xl p-1.5 rounded-2xl border border-slate-200 flex gap-1 shadow-xl">
             <button 
@@ -285,6 +251,9 @@ const App: React.FC = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
               Lijst
+              <span className={`ml-1 px-1.5 py-0.5 rounded-md text-[10px] min-w-[1.2rem] text-center ${viewMode === 'list' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-400'}`}>
+                {pins.length}
+              </span>
             </button>
             <button 
               onClick={() => setViewMode('map')}
@@ -339,7 +308,6 @@ const App: React.FC = () => {
                 onMapClick={() => setSelectedMapPinId(null)}
               />
               
-              {/* Selected Pin Overlay */}
               {selectedMapPin && (
                 <div className="absolute bottom-4 left-4 right-4 z-[500] animate-in slide-in-from-bottom-10 fade-in duration-300">
                   <div className="relative bg-white/50 backdrop-blur-sm p-1 rounded-3xl shadow-2xl">
@@ -355,8 +323,8 @@ const App: React.FC = () => {
                       pin={selectedMapPin}
                       onDelete={() => deletePin(selectedMapPin.id)}
                       onUpdateNote={updatePinNote}
-                      forceCollapseSignal={false} // Always open
-                      initiallyExpanded={true} // Always open
+                      forceCollapseSignal={false}
+                      initiallyExpanded={true}
                     />
                   </div>
                 </div>

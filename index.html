@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -22,11 +23,16 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
     <style>
+        :root {
+            background-color: #f8fafc; /* slate-50 */
+        }
         body {
             font-family: 'Inter', sans-serif;
             overflow-x: hidden;
+            background-color: #f8fafc;
             /* Prevent pull-to-refresh on mobile to enhance app-feel */
             overscroll-behavior-y: none;
+            margin: 0;
         }
         .header-font {
             font-family: 'Montserrat', sans-serif;
@@ -34,12 +40,17 @@
             letter-spacing: -0.05em;
         }
         .blurry-map {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
             background-image: url('https://static-maps.yandex.ru/1.x/?ll=5.2913,52.1326&z=7&l=map&size=650,450');
             background-size: cover;
             background-position: center;
+            background-color: #f8fafc;
             /* Heavily blurred to serve as abstract texture rather than a visible map */
             filter: blur(60px) opacity(0.15);
             transform: scale(1.2);
+            pointer-events: none;
         }
         /* Custom styles for Leaflet to fit our theme */
         .leaflet-container {
@@ -55,6 +66,17 @@
         /* Hide leaflet attribution completely */
         .leaflet-control-attribution {
             display: none !important;
+        }
+        
+        /* Smooth fade in for the root content to prevent harsh pop-in */
+        #root {
+            position: relative;
+            z-index: 10;
+            animation: fadeIn 0.4s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
     </style>
 <script type="importmap">
@@ -72,6 +94,8 @@
 <link rel="stylesheet" href="/index.css">
 </head>
 <body class="bg-slate-50 text-slate-900">
+    <!-- Blurry background already in HTML to prevent flickering -->
+    <div class="blurry-map"></div>
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
     <script>

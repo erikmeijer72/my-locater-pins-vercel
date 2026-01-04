@@ -1,5 +1,5 @@
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { PinData } from '../types';
 
 interface MapViewProps {
@@ -11,29 +11,25 @@ interface MapViewProps {
 const MapView: React.FC<MapViewProps> = ({ pins, onPinClick, onMapClick }) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const leafletMap = useRef<any>(null);
+  const [isReady, setIsReady] = useState(false);
 
-  // Separate effect to handle resizing and animation timing
+  // Zorg dat de kaart altijd de juiste afmetingen pakt
   useEffect(() => {
-    if (!mapRef.current) return;
-    
-    const resizeObserver = new ResizeObserver(() => {
+    const refresh = () => {
       if (leafletMap.current) {
         leafletMap.current.invalidateSize();
       }
-    });
+    };
+
+    // Meerdere triggers voor resize om animaties van de container op te vangen
+    const timer1 = setTimeout(refresh, 100);
+    const timer2 = setTimeout(refresh, 500);
     
-    resizeObserver.observe(mapRef.current);
-    
-    // Force invalidation after CSS animation (duration-500) completes
-    const timer = setTimeout(() => {
-      if (leafletMap.current) {
-        leafletMap.current.invalidateSize();
-      }
-    }, 600);
-    
+    window.addEventListener('resize', refresh);
     return () => {
-      resizeObserver.disconnect();
-      clearTimeout(timer);
+      window.removeEventListener('resize', refresh);
+      clearTimeout(timer1);
+      clearTimeout(timer2);
     };
   }, []);
 
@@ -41,120 +37,105 @@ const MapView: React.FC<MapViewProps> = ({ pins, onPinClick, onMapClick }) => {
     const L = (window as any).L;
     if (!mapRef.current || !L) return;
 
-    // Initialiseer kaart als dat nog niet is gebeurd
+    // 1. Initialiseer de kaart als deze nog niet bestaat
     if (!leafletMap.current) {
       leafletMap.current = L.map(mapRef.current, {
-        zoomControl: false, 
-        attributionControl: false, 
+        zoomControl: false,
+        attributionControl: false,
         scrollWheelZoom: true,
         dragging: true
-      }).setView([52.1326, 5.2913], 7);
+      });
 
       L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-        maxZoom: 20
+        maxZoom: 20,
+        subdomains: 'abcd'
       }).addTo(leafletMap.current);
 
-      // Add map background click handler to deselect
       leafletMap.current.on('click', () => {
         if (onMapClick) onMapClick();
       });
     }
 
-    // Zorg dat de kaart de container vult (immediate)
-    leafletMap.current.invalidateSize();
-
-    // Verwijder bestaande markers
+    // 2. Verwijder oude markers
     leafletMap.current.eachLayer((layer: any) => {
-      if (layer instanceof L.Marker || layer instanceof L.CircleMarker) {
+      if (layer instanceof L.Marker) {
         leafletMap.current.removeLayer(layer);
       }
     });
 
-    // Voeg nieuwe markers toe met nummers en centreer
+    // 3. Voeg markers toe en bepaal de uitersten
     if (pins.length > 0) {
       const markers: any[] = [];
       
-      // Pins array is gesorteerd van nieuw naar oud (index 0 is nieuwst)
-      // We willen dat de nieuwste pin het hoogste nummer heeft.
       pins.forEach((pin, index) => {
         const pinNumber = pins.length - index;
-
         const customIcon = L.divIcon({
           className: 'bg-transparent border-none',
           html: `
-            <div class="relative flex items-center justify-center w-6 h-6 bg-red-600 rounded-full border-[2.5px] border-white shadow-md transform hover:scale-110 transition-transform duration-200">
-              <span class="text-[10px] font-black text-white leading-none font-sans">${pinNumber}</span>
+            <div class="relative flex items-center justify-center w-6 h-6 bg-red-600 rounded-full border-[2.5px] border-white shadow-lg">
+              <span class="text-[10px] font-bold text-white leading-none">${pinNumber}</span>
             </div>
           `,
           iconSize: [24, 24],
-          iconAnchor: [12, 12], // Centreer het icoon op de coördinaat
-          popupAnchor: [0, -14] // Popup iets boven de marker
+          iconAnchor: [12, 12]
         });
 
-        const marker = L.marker([pin.latitude, pin.longitude], {
-          icon: customIcon
-        })
-          .addTo(leafletMap.current);
-          
-        // Bind popup but also add click handler for the card
-        marker.bindPopup(`
-            <div class="text-xs p-1 text-slate-900 font-bold min-w-[160px]">
-              <div class="flex items-center gap-2 mb-1.5 border-b border-slate-100 pb-1.5">
-                <span class="flex items-center justify-center w-4 h-4 bg-red-600 rounded-full text-[8px] text-white font-black">${pinNumber}</span>
-                <p class="font-black text-slate-800 uppercase tracking-tighter text-[10px]">${pin.city}</p>
-              </div>
-              <p class="font-bold text-slate-500 line-clamp-2 mb-2 leading-tight text-[10px]">${pin.address}</p>
-              <div class="flex items-center justify-between opacity-60 font-black text-[9px] uppercase tracking-widest text-slate-400">
-                <span>${pin.date}</span>
-                <span>${pin.time}</span>
-              </div>
-            </div>
-          `, { closeButton: false, offset: [0, 5], className: 'custom-popup' });
-
-        // Add click event to marker
+        const marker = L.marker([pin.latitude, pin.longitude], { icon: customIcon }).addTo(leafletMap.current);
         marker.on('click', (e: any) => {
-          // Stop propagation so the map click doesn't immediately deselect it
           L.DomEvent.stopPropagation(e);
-          if (onPinClick) {
-            onPinClick(pin.id);
-          }
+          if (onPinClick) onPinClick(pin.id);
         });
-
         markers.push(marker);
       });
 
-      // Fit bounds logic - Only run if we are not interacting with a specific pin selection
-      // We check if markers exist to avoid error
-      if (markers.length > 0) {
-          // If the map was just initialized or pins changed significantly, we fit bounds.
-          // Note: In a real complex app we might want to be smarter about when to re-zoom.
-          // For now, keeping existing logic but ensuring we don't break user zoom too often.
-          if (!leafletMap.current._hasFitBounds) {
-             const group = new L.featureGroup(markers);
-             leafletMap.current.fitBounds(group.getBounds().pad(0.5), {
-               animate: true,
-               duration: 1.0
-             });
-             leafletMap.current._hasFitBounds = true;
-          }
-      }
-
+      const group = new L.featureGroup(markers);
+      const bounds = group.getBounds().pad(0.2);
+      
+      // 4. Update view direct zonder animatie
+      leafletMap.current.invalidateSize();
+      leafletMap.current.fitBounds(bounds, { animate: false });
     } else {
       leafletMap.current.setView([52.1326, 5.2913], 7, { animate: false });
     }
 
+    setIsReady(true);
   }, [pins, onPinClick, onMapClick]);
 
-  // Reset fit bounds flag when pins change length significantly (import/delete)
-  useEffect(() => {
-     if (leafletMap.current) {
-        leafletMap.current._hasFitBounds = false;
-     }
-  }, [pins.length]);
-
   return (
-    <div className="relative w-full h-full rounded-3xl overflow-hidden border border-white/10 shadow-2xl bg-slate-200 flex flex-col">
-      <div ref={mapRef} className="flex-1 w-full h-full z-0" />
+    <div className="relative w-full h-full rounded-3xl overflow-hidden border border-white/20 shadow-2xl bg-[#f1f5f9] flex flex-col">
+      {/* Simpele loader die snel verdwijnt */}
+      {!isReady && (
+        <div className="absolute inset-0 z-50 bg-slate-100 flex items-center justify-center">
+           <div className="w-8 h-8 border-4 border-slate-200 border-t-red-600 rounded-full animate-spin"></div>
+        </div>
+      )}
+      
+      <div 
+        ref={mapRef} 
+        className="flex-1 w-full h-full z-0" 
+      />
+
+      {/* Handmatige zoom knoppen */}
+      <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
+        <div className="bg-white/90 backdrop-blur-md rounded-xl border border-slate-200 flex flex-col shadow-lg overflow-hidden">
+          <button 
+            onClick={() => leafletMap.current?.zoomIn()}
+            className="w-10 h-10 flex items-center justify-center hover:bg-slate-100 border-b border-slate-100"
+          >
+            <svg className="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" />
+            </svg>
+          </button>
+          <button 
+            onClick={() => leafletMap.current?.zoomOut()}
+            className="w-10 h-10 flex items-center justify-center hover:bg-slate-100"
+          >
+            <svg className="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M20 12H4" />
+            </svg>
+          </button>
+        </div>
+      </div>
     </div>
   );
 };

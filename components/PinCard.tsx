@@ -65,18 +65,23 @@ const PinCard: React.FC<PinCardProps> = ({ pin, onDelete, onUpdateNote, forceCol
 
   return (
     <div className={`
-      group relative bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-xl shadow-slate-200/50
-      transition-all duration-500 ${isExpanded ? 'mb-4' : 'mb-2'} hover:border-red-500/50
+      group relative rounded-2xl overflow-hidden border transition-all duration-500 ease-out
+      ${isExpanded 
+        ? 'bg-slate-100 border-slate-300 shadow-2xl mb-4 scale-[1.01] z-10' 
+        : 'bg-white border-slate-200 shadow-xl shadow-slate-200/50 mb-2 hover:border-red-500/30'
+      }
     `}>
       {/* Kopbalk - Altijd Zichtbaar */}
       <div 
         onClick={() => setIsExpanded(!isExpanded)}
-        className="px-4 py-3 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
+        className={`px-4 py-3 flex items-center justify-between cursor-pointer transition-colors ${isExpanded ? 'bg-slate-100/50' : 'hover:bg-slate-50'}`}
       >
         <div className="flex items-center gap-4">
           <img src={flagUrl} alt={pin.countryCode} className="h-4 w-6 object-cover rounded shadow-sm border border-slate-100 flex-shrink-0" />
           <div className="flex flex-col">
-            <span className="text-slate-900 font-black text-sm leading-none tracking-tight uppercase">{pin.city}</span>
+            <span className={`font-black text-sm leading-none tracking-tight uppercase transition-colors ${isExpanded ? 'text-red-700' : 'text-slate-900'}`}>
+              {pin.city}
+            </span>
             <span className="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-widest">{pin.date} • {pin.time}</span>
           </div>
         </div>
@@ -87,8 +92,8 @@ const PinCard: React.FC<PinCardProps> = ({ pin, onDelete, onUpdateNote, forceCol
                <span className="text-[9px] text-slate-400 uppercase font-bold tracking-tighter">{pin.latitude.toFixed(4)}, {pin.longitude.toFixed(4)}</span>
             </div>
           )}
-          <div className={`transition-transform duration-500 bg-red-50 p-1 rounded-lg ${isExpanded ? 'rotate-180' : 'rotate-0'}`}>
-            <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className={`transition-all duration-500 p-1 rounded-lg ${isExpanded ? 'rotate-180 bg-red-600 text-white shadow-md shadow-red-200' : 'rotate-0 bg-red-50 text-red-600'}`}>
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
             </svg>
           </div>
@@ -100,12 +105,13 @@ const PinCard: React.FC<PinCardProps> = ({ pin, onDelete, onUpdateNote, forceCol
         <div className="animate-in slide-in-from-top-4 duration-500">
           {/* Kaart Afbeelding - Smaller, inset and rounded */}
           <div className="px-4 pt-2">
-            <div className="relative h-28 w-full bg-slate-100 rounded-xl overflow-hidden border border-slate-200 shadow-inner">
+            <div className="relative h-28 w-full bg-slate-200 rounded-xl overflow-hidden border border-slate-300 shadow-inner">
               <img 
                 src={pin.mapImageUrl} 
                 alt="Kaartweergave" 
                 className="w-full h-full object-cover opacity-90 group-hover:scale-105 transition-transform duration-1000"
               />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-900/20 to-transparent pointer-events-none"></div>
             </div>
           </div>
 
@@ -116,7 +122,7 @@ const PinCard: React.FC<PinCardProps> = ({ pin, onDelete, onUpdateNote, forceCol
                 {/* Adres Text Area */}
                 <div className="flex-1 min-w-0">
                   <p className="text-[10px] font-black text-red-600 uppercase tracking-[0.2em] mb-1">Adres</p>
-                  <p className="text-xs text-slate-600 leading-relaxed font-bold" title={pin.address}>
+                  <p className="text-xs text-slate-700 leading-relaxed font-bold" title={pin.address}>
                     {pin.address}
                   </p>
                 </div>
@@ -126,7 +132,7 @@ const PinCard: React.FC<PinCardProps> = ({ pin, onDelete, onUpdateNote, forceCol
                   <button 
                     onClick={handleNavigate}
                     title="Navigeer"
-                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-all active:scale-95"
+                    className="p-2 text-slate-500 hover:text-red-600 hover:bg-white rounded-full shadow-sm hover:shadow-md transition-all active:scale-95 bg-slate-200/50"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
@@ -136,7 +142,7 @@ const PinCard: React.FC<PinCardProps> = ({ pin, onDelete, onUpdateNote, forceCol
                   <button 
                     onClick={handleShare}
                     title="Deel"
-                    className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all active:scale-95"
+                    className="p-2 text-slate-500 hover:text-blue-600 hover:bg-white rounded-full shadow-sm hover:shadow-md transition-all active:scale-95 bg-slate-200/50"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
@@ -146,7 +152,7 @@ const PinCard: React.FC<PinCardProps> = ({ pin, onDelete, onUpdateNote, forceCol
                   <button 
                     onClick={(e) => { e.stopPropagation(); onDelete(); }}
                     title="Verwijder"
-                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-all active:scale-95"
+                    className="p-2 text-slate-500 hover:text-red-600 hover:bg-white rounded-full shadow-sm hover:shadow-md transition-all active:scale-95 bg-slate-200/50"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -163,7 +169,7 @@ const PinCard: React.FC<PinCardProps> = ({ pin, onDelete, onUpdateNote, forceCol
                   onBlur={handleNoteBlur}
                   placeholder="Voeg een notitie toe..."
                   rows={1}
-                  className="w-full h-9 py-2 px-3 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-100 focus:border-red-300 transition-all resize-none text-slate-700 font-medium placeholder-slate-400"
+                  className="w-full h-9 py-2 px-3 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-100 focus:border-red-300 transition-all resize-none text-slate-800 font-medium placeholder-slate-400 shadow-inner"
                 />
               </div>
 
