@@ -231,14 +231,14 @@ const Header: React.FC<HeaderProps> = ({ isAllCollapsed, onToggleAll, pins, onIm
 
       {/* Import Status Modal (Success/Error) */}
       {importStatus && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 h-full w-full">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
           {/* Backdrop */}
           <div 
             className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" 
             onClick={() => setImportStatus(null)}
           ></div>
           
-          <div className="relative bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm border border-slate-100 animate-in zoom-in-95 fade-in duration-200 mx-auto my-auto">
+          <div className="relative bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm border border-slate-100 animate-in zoom-in-95 fade-in duration-200">
             <div className="flex flex-col items-center text-center">
               <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 ${importStatus.type === 'success' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
                 {importStatus.type === 'success' ? (
@@ -268,7 +268,7 @@ const Header: React.FC<HeaderProps> = ({ isAllCollapsed, onToggleAll, pins, onIm
 
       {/* Delete Confirmation Modal */}
       {showConfirm && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 h-full w-full">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
           {/* Backdrop with click handler */}
           <div 
             className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" 
@@ -276,7 +276,7 @@ const Header: React.FC<HeaderProps> = ({ isAllCollapsed, onToggleAll, pins, onIm
           ></div>
           
           {/* Content */}
-          <div className="relative bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm border border-slate-100 animate-in zoom-in-95 fade-in duration-200 mx-auto my-auto">
+          <div className="relative bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm border border-slate-100 animate-in zoom-in-95 fade-in duration-200">
             <div className="flex flex-col items-center text-center">
               <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
