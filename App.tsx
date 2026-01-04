@@ -282,7 +282,7 @@ const App: React.FC = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                 </svg>
               </div>
-              <p className="text-xl font-black text-slate-900 mb-2 uppercase tracking-tighter">Nog geen pins opgeslagen</p>
+              <p className="text-xl font-black text-slate-900 mb-2 uppercase tracking-tighter">Nog geen pins<br/>opgeslagen</p>
               <p className="text-sm text-slate-500 max-w-[200px] leading-relaxed">Klik op de rode knop om je eerste locatie vast te leggen of importeer gegevens!</p>
             </div>
           )}
