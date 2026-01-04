@@ -8,9 +8,21 @@ interface PinCardProps {
   onUpdateNote: (id: string, note: string) => void;
   forceCollapseSignal: boolean;
   initiallyExpanded?: boolean;
+  isSelectionMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: () => void;
 }
 
-const PinCard: React.FC<PinCardProps> = ({ pin, onDelete, onUpdateNote, forceCollapseSignal, initiallyExpanded }) => {
+const PinCard: React.FC<PinCardProps> = ({ 
+  pin, 
+  onDelete, 
+  onUpdateNote, 
+  forceCollapseSignal, 
+  initiallyExpanded,
+  isSelectionMode = false,
+  isSelected = false,
+  onToggleSelect
+}) => {
   // Use initiallyExpanded if provided (for new pins), otherwise default to false
   const [isExpanded, setIsExpanded] = useState(initiallyExpanded || false);
   const [noteText, setNoteText] = useState(pin.note || '');
@@ -28,6 +40,21 @@ const PinCard: React.FC<PinCardProps> = ({ pin, onDelete, onUpdateNote, forceCol
   useEffect(() => {
     setNoteText(pin.note || '');
   }, [pin.note]);
+
+  // If entering selection mode, collapse card
+  useEffect(() => {
+    if (isSelectionMode) {
+      setIsExpanded(false);
+    }
+  }, [isSelectionMode]);
+
+  const handleCardClick = () => {
+    if (isSelectionMode && onToggleSelect) {
+      onToggleSelect();
+    } else {
+      setIsExpanded(!isExpanded);
+    }
+  };
 
   const handleNavigate = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -65,43 +92,66 @@ const PinCard: React.FC<PinCardProps> = ({ pin, onDelete, onUpdateNote, forceCol
 
   return (
     <div className={`
-      group relative rounded-2xl overflow-hidden border transition-all duration-500 ease-out
-      ${isExpanded 
-        ? 'bg-slate-100 border-slate-300 shadow-2xl mb-4 scale-[1.01] z-10' 
-        : 'bg-white border-slate-200 shadow-xl shadow-slate-200/50 mb-2 hover:border-red-500/30'
+      group relative rounded-2xl overflow-hidden border transition-all duration-300 ease-out
+      ${isSelectionMode && isSelected 
+        ? 'bg-red-50 border-red-300 shadow-md ring-2 ring-red-500 ring-offset-2' 
+        : isExpanded 
+          ? 'bg-slate-100 border-slate-300 shadow-2xl mb-4 scale-[1.01] z-10' 
+          : 'bg-white border-slate-200 shadow-xl shadow-slate-200/50 mb-2 hover:border-red-500/30'
       }
-    `}>
+      ${isSelectionMode ? 'cursor-pointer active:scale-[0.98]' : ''}
+    `}
+    onClick={isSelectionMode ? handleCardClick : undefined}
+    >
       {/* Kopbalk - Altijd Zichtbaar */}
       <div 
-        onClick={() => setIsExpanded(!isExpanded)}
-        className={`px-4 py-3 flex items-center justify-between cursor-pointer transition-colors ${isExpanded ? 'bg-slate-100/50' : 'hover:bg-slate-50'}`}
+        onClick={!isSelectionMode ? () => setIsExpanded(!isExpanded) : undefined}
+        className={`px-4 py-3 flex items-center justify-between transition-colors ${isExpanded ? 'bg-slate-100/50' : ''}`}
       >
         <div className="flex items-center gap-4">
-          <img src={flagUrl} alt={pin.countryCode} className="h-4 w-6 object-cover rounded shadow-sm border border-slate-100 flex-shrink-0" />
+          
+          {/* Selection Checkbox */}
+          {isSelectionMode ? (
+            <div className={`
+              w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all duration-200
+              ${isSelected ? 'bg-red-600 border-red-600' : 'bg-white border-slate-300'}
+            `}>
+              {isSelected && (
+                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+            </div>
+          ) : (
+            <img src={flagUrl} alt={pin.countryCode} className="h-4 w-6 object-cover rounded shadow-sm border border-slate-100 flex-shrink-0" />
+          )}
+
           <div className="flex flex-col">
-            <span className={`font-black text-sm leading-none tracking-tight uppercase transition-colors ${isExpanded ? 'text-red-700' : 'text-slate-900'}`}>
+            <span className={`font-black text-sm leading-none tracking-tight uppercase transition-colors ${isExpanded || isSelected ? 'text-red-700' : 'text-slate-900'}`}>
               {pin.city}
             </span>
             <span className="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-widest">{pin.date} • {pin.time}</span>
           </div>
         </div>
         
-        <div className="flex items-center gap-3">
-          {!isExpanded && (
-            <div className="hidden sm:flex items-center gap-2 mr-2">
-               <span className="text-[9px] text-slate-400 uppercase font-bold tracking-tighter">{pin.latitude.toFixed(4)}, {pin.longitude.toFixed(4)}</span>
+        {!isSelectionMode && (
+          <div className="flex items-center gap-3">
+            {!isExpanded && (
+              <div className="hidden sm:flex items-center gap-2 mr-2">
+                 <span className="text-[9px] text-slate-400 uppercase font-bold tracking-tighter">{pin.latitude.toFixed(4)}, {pin.longitude.toFixed(4)}</span>
+              </div>
+            )}
+            <div className={`transition-all duration-500 p-1 rounded-lg ${isExpanded ? 'rotate-180 bg-red-600 text-white shadow-md shadow-red-200' : 'rotate-0 bg-red-50 text-red-600'}`}>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+              </svg>
             </div>
-          )}
-          <div className={`transition-all duration-500 p-1 rounded-lg ${isExpanded ? 'rotate-180 bg-red-600 text-white shadow-md shadow-red-200' : 'rotate-0 bg-red-50 text-red-600'}`}>
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
-            </svg>
           </div>
-        </div>
+        )}
       </div>
 
-      {/* Inklapbaar Gedeelte */}
-      {isExpanded && (
+      {/* Inklapbaar Gedeelte - Alleen zichtbaar als NIET in selectiemodus */}
+      {isExpanded && !isSelectionMode && (
         <div className="animate-in slide-in-from-top-4 duration-500">
           {/* Kaart Afbeelding - Smaller, inset and rounded */}
           <div className="px-4 pt-2">

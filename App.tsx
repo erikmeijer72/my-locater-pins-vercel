@@ -12,6 +12,11 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [globalCollapseSignal, setGlobalCollapseSignal] = useState<boolean>(true);
   
+  // Selection Mode State
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedPinIds, setSelectedPinIds] = useState<Set<string>>(new Set());
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+
   const [viewMode, setViewMode] = useState<'list' | 'map'>(() => {
     const savedMode = localStorage.getItem('locator_view_mode');
     return (savedMode === 'list' || savedMode === 'map') ? savedMode : 'list';
@@ -68,6 +73,13 @@ const App: React.FC = () => {
       setViewMode('list');
     }
   }, [pins, viewMode]);
+
+  // Reset selection when leaving selection mode
+  useEffect(() => {
+    if (!isSelectionMode) {
+      setSelectedPinIds(new Set());
+    }
+  }, [isSelectionMode]);
 
   const getPreciseLocation = () => {
     return new Promise<GeolocationPosition>((resolve, reject) => {
@@ -205,6 +217,23 @@ const App: React.FC = () => {
     }
   };
 
+  const handleBulkDelete = () => {
+    setPins(prev => prev.filter(p => !selectedPinIds.has(p.id)));
+    setSelectedPinIds(new Set());
+    setIsSelectionMode(false);
+    setShowBulkDeleteConfirm(false);
+  };
+
+  const toggleSelection = (id: string) => {
+    const newSet = new Set(selectedPinIds);
+    if (newSet.has(id)) {
+      newSet.delete(id);
+    } else {
+      newSet.add(id);
+    }
+    setSelectedPinIds(newSet);
+  };
+
   const updatePinNote = (id: string, note: string) => {
     setPins(prev => prev.map(p => (p.id === id ? { ...p, note } : p)));
   };
@@ -214,6 +243,7 @@ const App: React.FC = () => {
     localStorage.removeItem('my_locater_pins');
     setViewMode('list');
     setSelectedMapPinId(null);
+    setIsSelectionMode(false);
   }, []);
 
   const handleImportPins = (newPins: PinData[]) => {
@@ -230,7 +260,6 @@ const App: React.FC = () => {
 
   return (
     <div className="relative min-h-screen w-full flex flex-col overflow-hidden">
-      {/* Background is now in index.html to avoid white flash */}
       
       <div className="relative z-10 flex flex-col h-screen bg-white/30 backdrop-blur-[2px]">
         <Header 
@@ -239,34 +268,48 @@ const App: React.FC = () => {
           pins={pins}
           onImport={handleImportPins}
           onDeleteAll={handleDeleteAll}
+          isSelectionMode={isSelectionMode}
+          onToggleSelectionMode={() => setIsSelectionMode(!isSelectionMode)}
         />
         
-        <div className="px-6 pb-6 flex justify-center sticky top-[100px] z-20">
-          <div className="bg-white/80 backdrop-blur-xl p-1.5 rounded-2xl border border-slate-200 flex gap-1 shadow-xl">
-            <button 
-              onClick={() => setViewMode('list')}
-              className={`px-5 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all flex items-center gap-2 ${viewMode === 'list' ? 'bg-red-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-              Lijst
-              <span className={`ml-1 px-1.5 py-0.5 rounded-md text-[10px] min-w-[1.2rem] text-center ${viewMode === 'list' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-400'}`}>
-                {pins.length}
-              </span>
-            </button>
-            <button 
-              onClick={() => setViewMode('map')}
-              disabled={pins.length === 0}
-              className={`px-5 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all flex items-center gap-2 ${viewMode === 'map' ? 'bg-red-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'} ${pins.length === 0 ? 'opacity-50 cursor-not-allowed grayscale' : ''}`}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-              </svg>
-              Kaart
-            </button>
+        {isSelectionMode ? (
+           <div className="px-6 pb-6 flex justify-center sticky top-[100px] z-20 animate-in fade-in slide-in-from-top-4">
+             <div className="bg-slate-900 text-white px-6 py-2 rounded-2xl shadow-xl flex items-center gap-3">
+               <span className="font-bold text-sm">Selecteer items</span>
+               <span className="bg-white/20 px-2 py-0.5 rounded-lg text-xs font-mono">{selectedPinIds.size}</span>
+               <button onClick={() => setIsSelectionMode(false)} className="ml-2 text-slate-300 hover:text-white">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+               </button>
+             </div>
+           </div>
+        ) : (
+          <div className="px-6 pb-6 flex justify-center sticky top-[100px] z-20">
+            <div className="bg-white/80 backdrop-blur-xl p-1.5 rounded-2xl border border-slate-200 flex gap-1 shadow-xl">
+              <button 
+                onClick={() => setViewMode('list')}
+                className={`px-5 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all flex items-center gap-2 ${viewMode === 'list' ? 'bg-red-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+                Lijst
+                <span className={`ml-1 px-1.5 py-0.5 rounded-md text-[10px] min-w-[1.2rem] text-center ${viewMode === 'list' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-400'}`}>
+                  {pins.length}
+                </span>
+              </button>
+              <button 
+                onClick={() => setViewMode('map')}
+                disabled={pins.length === 0}
+                className={`px-5 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all flex items-center gap-2 ${viewMode === 'map' ? 'bg-red-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'} ${pins.length === 0 ? 'opacity-50 cursor-not-allowed grayscale' : ''}`}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                </svg>
+                Kaart
+              </button>
+            </div>
           </div>
-        </div>
+        )}
         
         <main className="flex-1 overflow-y-auto px-4 pb-32 scroll-smooth">
           {error && (
@@ -296,7 +339,10 @@ const App: React.FC = () => {
                   onDelete={() => deletePin(pin.id)}
                   onUpdateNote={updatePinNote}
                   forceCollapseSignal={globalCollapseSignal}
-                  initiallyExpanded={pin.id === lastCreatedPinId}
+                  initiallyExpanded={!isSelectionMode && pin.id === lastCreatedPinId}
+                  isSelectionMode={isSelectionMode}
+                  isSelected={selectedPinIds.has(pin.id)}
+                  onToggleSelect={() => toggleSelection(pin.id)}
                 />
               ))}
             </div>
@@ -333,7 +379,67 @@ const App: React.FC = () => {
           )}
         </main>
 
-        <RecordButton onClick={recordLocation} isLoading={isRecording} />
+        {isSelectionMode ? (
+          /* Bulk Delete Button */
+          <div className="fixed bottom-8 left-0 right-0 z-50 flex justify-center pointer-events-none">
+            <button
+              onClick={() => setShowBulkDeleteConfirm(true)}
+              disabled={selectedPinIds.size === 0}
+              className={`
+                pointer-events-auto
+                group relative flex items-center justify-center gap-2 px-8 py-4
+                bg-red-600 text-white font-bold rounded-full
+                shadow-[0_8px_20px_rgba(220,38,38,0.4)]
+                transition-all duration-300 hover:scale-105 active:scale-95 
+                disabled:opacity-0 disabled:translate-y-10
+              `}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              <span>Verwijder ({selectedPinIds.size})</span>
+            </button>
+          </div>
+        ) : (
+          <RecordButton onClick={recordLocation} isLoading={isRecording} />
+        )}
+
+        {/* Bulk Delete Confirmation Modal */}
+        {showBulkDeleteConfirm && (
+        <div className="fixed inset-0 z-[9999] flex items-start justify-center p-4 pt-48">
+          <div 
+            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" 
+            onClick={() => setShowBulkDeleteConfirm(false)}
+          ></div>
+          <div className="relative bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm border border-slate-100 animate-in slide-in-from-top-10 fade-in duration-300">
+            <div className="flex flex-col items-center text-center">
+              <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-black text-slate-900 mb-2">Selectie verwijderen?</h3>
+              <p className="text-sm text-slate-500 mb-6 font-medium leading-relaxed">
+                Je staat op het punt om <span className="text-slate-900 font-bold">{selectedPinIds.size}</span> locaties te wissen.
+              </p>
+              <div className="flex gap-3 w-full">
+                <button 
+                  onClick={() => setShowBulkDeleteConfirm(false)}
+                  className="flex-1 px-4 py-3 rounded-xl text-sm font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors"
+                >
+                  Annuleer
+                </button>
+                <button 
+                  onClick={handleBulkDelete}
+                  className="flex-1 px-4 py-3 rounded-xl text-sm font-bold text-white bg-red-600 hover:bg-red-700 shadow-lg shadow-red-600/20 transition-all active:scale-95"
+                >
+                  Verwijderen
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       </div>
     </div>
   );

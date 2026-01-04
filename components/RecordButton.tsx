@@ -8,7 +8,7 @@ interface RecordButtonProps {
 
 const RecordButton: React.FC<RecordButtonProps> = ({ onClick, isLoading }) => {
   return (
-    <div className="fixed bottom-8 left-8 z-50 flex flex-col items-center">
+    <div className="fixed bottom-14 left-8 z-50 flex flex-col items-center">
       <button
         onClick={onClick}
         disabled={isLoading}

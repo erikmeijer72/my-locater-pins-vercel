@@ -43,13 +43,15 @@
             position: fixed;
             inset: 0;
             z-index: 0;
+            /* Map of Netherlands centered */
             background-image: url('https://static-maps.yandex.ru/1.x/?ll=5.2913,52.1326&z=7&l=map&size=650,450');
             background-size: cover;
             background-position: center;
+            background-repeat: no-repeat;
             background-color: #f8fafc;
-            /* Heavily blurred to serve as abstract texture rather than a visible map */
-            filter: blur(60px) opacity(0.15);
-            transform: scale(1.2);
+            /* Reduced blur to make it recognizable as a map, but still background */
+            filter: blur(10px) opacity(0.35) grayscale(20%);
+            transform: scale(1.1); /* Scale up slightly to hide blur edges */
             pointer-events: none;
         }
         /* Custom styles for Leaflet to fit our theme */

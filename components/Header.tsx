@@ -8,9 +8,19 @@ interface HeaderProps {
   pins: PinData[];
   onImport: (pins: PinData[]) => void;
   onDeleteAll: () => void;
+  isSelectionMode?: boolean;
+  onToggleSelectionMode?: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ isAllCollapsed, onToggleAll, pins, onImport, onDeleteAll }) => {
+const Header: React.FC<HeaderProps> = ({ 
+  isAllCollapsed, 
+  onToggleAll, 
+  pins, 
+  onImport, 
+  onDeleteAll,
+  isSelectionMode,
+  onToggleSelectionMode
+}) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -42,7 +52,6 @@ const Header: React.FC<HeaderProps> = ({ isAllCollapsed, onToggleAll, pins, onIm
     setIsMenuOpen(false);
     
     if (pins.length === 0) {
-      // Small inline check, could also use the new modal but alert is okay for this simple check
       alert("Geen gegevens om te exporteren.");
       return;
     }
@@ -69,7 +78,6 @@ const Header: React.FC<HeaderProps> = ({ isAllCollapsed, onToggleAll, pins, onIm
     e.preventDefault();
     e.stopPropagation();
     setIsMenuOpen(false);
-    // Direct click is more reliable than setTimeout for file inputs
     fileInputRef.current?.click();
   };
 
@@ -106,7 +114,6 @@ const Header: React.FC<HeaderProps> = ({ isAllCollapsed, onToggleAll, pins, onIm
       }
     };
     reader.readAsText(file);
-    // Reset input so the same file can be picked again
     event.target.value = '';
   };
 
@@ -114,13 +121,15 @@ const Header: React.FC<HeaderProps> = ({ isAllCollapsed, onToggleAll, pins, onIm
     e.preventDefault();
     e.stopPropagation();
     setIsMenuOpen(false);
-    
-    if (pins.length === 0) {
-      return;
-    }
-    
-    // Show custom modal instead of native confirm
+    if (pins.length === 0) return;
     setShowConfirm(true);
+  };
+
+  const handleToggleSelectionClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsMenuOpen(false);
+    if (onToggleSelectionMode) onToggleSelectionMode();
   };
 
   const confirmDelete = () => {
@@ -145,7 +154,6 @@ const Header: React.FC<HeaderProps> = ({ isAllCollapsed, onToggleAll, pins, onIm
       </div>
       
       <div className="flex items-center gap-2 relative">
-        {/* Toggle Collapse Button */}
         <button 
           onClick={onToggleAll}
           className="p-3 bg-slate-100 hover:bg-slate-200 active:scale-90 transition-all rounded-2xl border border-slate-200 text-slate-600 group shadow-sm hover:shadow-md cursor-pointer"
@@ -163,7 +171,6 @@ const Header: React.FC<HeaderProps> = ({ isAllCollapsed, onToggleAll, pins, onIm
           )}
         </button>
 
-        {/* Menu Button */}
         <div ref={menuRef} className="relative">
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -176,10 +183,24 @@ const Header: React.FC<HeaderProps> = ({ isAllCollapsed, onToggleAll, pins, onIm
             </svg>
           </button>
 
-          {/* Dropdown Menu */}
           {isMenuOpen && (
             <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200 origin-top-right">
               <div className="py-1">
+                {onToggleSelectionMode && (
+                  <button
+                    onClick={handleToggleSelectionClick}
+                    className="w-full text-left px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-3 transition-colors cursor-pointer"
+                    type="button"
+                  >
+                    <div className={`w-4 h-4 border-2 rounded ${isSelectionMode ? 'bg-slate-500 border-slate-500' : 'border-slate-400'}`}>
+                        {isSelectionMode && <svg className="w-3 h-3 text-white" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>}
+                    </div>
+                    <span className="font-semibold">{isSelectionMode ? 'Stop selecteren' : 'Selecteren'}</span>
+                  </button>
+                )}
+
+                <div className="h-px bg-slate-100 my-1"></div>
+
                 <button
                   onClick={handleImportClick}
                   className="w-full text-left px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-3 transition-colors cursor-pointer"
@@ -220,7 +241,6 @@ const Header: React.FC<HeaderProps> = ({ isAllCollapsed, onToggleAll, pins, onIm
         </div>
       </div>
       
-      {/* Hidden file input placed outside conditional rendering */}
       <input 
         type="file" 
         ref={fileInputRef} 
@@ -229,16 +249,13 @@ const Header: React.FC<HeaderProps> = ({ isAllCollapsed, onToggleAll, pins, onIm
         className="hidden" 
       />
 
-      {/* Import Status Modal (Success/Error) */}
       {importStatus && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-          {/* Backdrop */}
+        <div className="fixed inset-0 z-[9999] flex items-start justify-center p-4 pt-48">
           <div 
             className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" 
             onClick={() => setImportStatus(null)}
           ></div>
-          
-          <div className="relative bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm border border-slate-100 animate-in zoom-in-95 fade-in duration-200">
+          <div className="relative bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm border border-slate-100 animate-in slide-in-from-top-10 fade-in duration-300">
             <div className="flex flex-col items-center text-center">
               <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 ${importStatus.type === 'success' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
                 {importStatus.type === 'success' ? (
@@ -266,17 +283,13 @@ const Header: React.FC<HeaderProps> = ({ isAllCollapsed, onToggleAll, pins, onIm
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
       {showConfirm && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-          {/* Backdrop with click handler */}
+        <div className="fixed inset-0 z-[9999] flex items-start justify-center p-4 pt-48">
           <div 
             className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" 
             onClick={() => setShowConfirm(false)}
           ></div>
-          
-          {/* Content */}
-          <div className="relative bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm border border-slate-100 animate-in zoom-in-95 fade-in duration-200">
+          <div className="relative bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm border border-slate-100 animate-in slide-in-from-top-10 fade-in duration-300">
             <div className="flex flex-col items-center text-center">
               <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
