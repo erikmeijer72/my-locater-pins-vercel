@@ -24,6 +24,7 @@ const Header: React.FC<HeaderProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
   
   // State for Import Result Modal
   const [importStatus, setImportStatus] = useState<{ type: 'success' | 'error', title: string, message: string } | null>(null);
@@ -34,7 +35,7 @@ const Header: React.FC<HeaderProps> = ({
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       // If modal is open, ignore clicks outside the menu (modal has its own backdrop)
-      if (showConfirm || importStatus) return;
+      if (showConfirm || importStatus || showAbout) return;
 
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setIsMenuOpen(false);
@@ -44,7 +45,7 @@ const Header: React.FC<HeaderProps> = ({
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [showConfirm, importStatus]);
+  }, [showConfirm, importStatus, showAbout]);
 
   const handleExport = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -130,6 +131,13 @@ const Header: React.FC<HeaderProps> = ({
     e.stopPropagation();
     setIsMenuOpen(false);
     if (onToggleSelectionMode) onToggleSelectionMode();
+  };
+
+  const handleAboutClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsMenuOpen(false);
+    setShowAbout(true);
   };
 
   const confirmDelete = () => {
@@ -235,6 +243,19 @@ const Header: React.FC<HeaderProps> = ({
                   </svg>
                   <span className="font-bold">Verwijder alles</span>
                 </button>
+
+                <div className="h-px bg-slate-100 my-1"></div>
+
+                <button
+                  onClick={handleAboutClick}
+                  className="w-full text-left px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-3 transition-colors cursor-pointer"
+                  type="button"
+                >
+                  <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span className="font-semibold">Over deze app</span>
+                </button>
               </div>
             </div>
           )}
@@ -277,6 +298,34 @@ const Header: React.FC<HeaderProps> = ({
                 className={`w-full px-4 py-3 rounded-xl text-sm font-bold text-white shadow-lg transition-all active:scale-95 ${importStatus.type === 'success' ? 'bg-slate-900 hover:bg-slate-800 shadow-slate-900/20' : 'bg-red-600 hover:bg-red-700 shadow-red-600/20'}`}
               >
                 Begrepen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showAbout && (
+        <div className="fixed inset-0 z-[9999] flex items-start justify-center p-4 pt-48">
+          <div 
+            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" 
+            onClick={() => setShowAbout(false)}
+          ></div>
+          <div className="relative bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm border border-slate-100 animate-in slide-in-from-top-10 fade-in duration-300">
+            <div className="flex flex-col items-center text-center">
+              <div className="w-12 h-12 bg-slate-100 text-slate-600 rounded-full flex items-center justify-center mb-4">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-black text-slate-900 mb-2">Over deze app</h3>
+              <p className="text-sm text-slate-500 mb-6 font-medium leading-relaxed">
+                Gemaakt door E. Meijer (januari 2026)
+              </p>
+              <button 
+                onClick={() => setShowAbout(false)}
+                className="w-full px-4 py-3 rounded-xl text-sm font-bold text-white bg-slate-900 hover:bg-slate-800 shadow-lg shadow-slate-900/20 transition-all active:scale-95"
+              >
+                Sluiten
               </button>
             </div>
           </div>
