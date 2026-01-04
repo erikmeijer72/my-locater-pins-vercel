@@ -182,6 +182,11 @@ const App: React.FC = () => {
         initialNote = `⚠️ Onnauwkeurig signaal (~${kmOff}km afwijking)`;
       }
 
+      // Format date as "zo 4-1-2026"
+      const days = ['zo', 'ma', 'di', 'wo', 'do', 'vr', 'za'];
+      const dayName = days[now.getDay()];
+      const formattedDate = `${dayName} ${now.getDate()}-${now.getMonth() + 1}-${now.getFullYear()}`;
+
       const newPinId = crypto.randomUUID();
       const newPin: PinData = {
         id: newPinId,
@@ -190,7 +195,7 @@ const App: React.FC = () => {
         address, 
         city,
         countryCode,
-        date: now.toLocaleDateString('nl-NL'),
+        date: formattedDate,
         time: now.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }),
         mapImageUrl,
         note: initialNote
