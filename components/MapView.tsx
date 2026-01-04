@@ -101,7 +101,7 @@ const MapView: React.FC<MapViewProps> = ({ pins, onPinClick, onMapClick }) => {
       }
       
       setIsReady(true);
-    }, 300); // Aangepast naar 300ms
+    }, 150); // Aangepast naar 150ms
 
     return () => clearTimeout(timer);
 
