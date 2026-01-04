@@ -13,24 +13,15 @@ const MapView: React.FC<MapViewProps> = ({ pins, onPinClick, onMapClick }) => {
   const leafletMap = useRef<any>(null);
   const [isReady, setIsReady] = useState(false);
 
-  // Zorg dat de kaart altijd de juiste afmetingen pakt
+  // Zorg dat de kaart altijd de juiste afmetingen pakt bij window resize
   useEffect(() => {
     const refresh = () => {
       if (leafletMap.current) {
         leafletMap.current.invalidateSize();
       }
     };
-
-    // Meerdere triggers voor resize om animaties van de container op te vangen
-    const timer1 = setTimeout(refresh, 100);
-    const timer2 = setTimeout(refresh, 500);
-    
     window.addEventListener('resize', refresh);
-    return () => {
-      window.removeEventListener('resize', refresh);
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-    };
+    return () => window.removeEventListener('resize', refresh);
   }, []);
 
   useEffect(() => {
@@ -63,7 +54,9 @@ const MapView: React.FC<MapViewProps> = ({ pins, onPinClick, onMapClick }) => {
       }
     });
 
-    // 3. Voeg markers toe en bepaal de uitersten
+    // 3. Bereken markers en bounds synchroon
+    let targetBounds: any = null;
+
     if (pins.length > 0) {
       const markers: any[] = [];
       
@@ -89,26 +82,40 @@ const MapView: React.FC<MapViewProps> = ({ pins, onPinClick, onMapClick }) => {
       });
 
       const group = new L.featureGroup(markers);
-      const bounds = group.getBounds().pad(0.2);
-      
-      // 4. Update view direct zonder animatie
-      leafletMap.current.invalidateSize();
-      leafletMap.current.fitBounds(bounds, { animate: false });
-    } else {
-      leafletMap.current.setView([52.1326, 5.2913], 7, { animate: false });
+      targetBounds = group.getBounds().pad(0.2);
     }
 
-    setIsReady(true);
+    // 4. Stel een vertraging in voordat we de view updaten.
+    setIsReady(false);
+    
+    const timer = setTimeout(() => {
+      if (!leafletMap.current) return;
+
+      // Forceer Leaflet om de container grootte opnieuw te lezen
+      leafletMap.current.invalidateSize();
+
+      if (targetBounds) {
+        leafletMap.current.fitBounds(targetBounds, { animate: false });
+      } else {
+        leafletMap.current.setView([52.1326, 5.2913], 7, { animate: false });
+      }
+      
+      setIsReady(true);
+    }, 300); // Aangepast naar 300ms
+
+    return () => clearTimeout(timer);
+
   }, [pins, onPinClick, onMapClick]);
 
   return (
     <div className="relative w-full h-full rounded-3xl overflow-hidden border border-white/20 shadow-2xl bg-[#f1f5f9] flex flex-col">
-      {/* Simpele loader die snel verdwijnt */}
-      {!isReady && (
-        <div className="absolute inset-0 z-50 bg-slate-100 flex items-center justify-center">
-           <div className="w-8 h-8 border-4 border-slate-200 border-t-red-600 rounded-full animate-spin"></div>
-        </div>
-      )}
+      {/* Loader overlay */}
+      <div 
+        className={`absolute inset-0 z-50 bg-slate-100 flex flex-col items-center justify-center transition-opacity duration-500 ${isReady ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+      >
+         <div className="w-10 h-10 border-4 border-slate-200 border-t-red-600 rounded-full animate-spin mb-3"></div>
+         <span className="text-xs font-bold text-slate-400 uppercase tracking-widest animate-pulse">Kaart laden...</span>
+      </div>
       
       <div 
         ref={mapRef} 
@@ -116,7 +123,7 @@ const MapView: React.FC<MapViewProps> = ({ pins, onPinClick, onMapClick }) => {
       />
 
       {/* Handmatige zoom knoppen */}
-      <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
+      <div className={`absolute top-4 right-4 z-10 flex flex-col gap-2 transition-all duration-500 ${isReady ? 'translate-x-0 opacity-100' : 'translate-x-10 opacity-0'}`}>
         <div className="bg-white/90 backdrop-blur-md rounded-xl border border-slate-200 flex flex-col shadow-lg overflow-hidden">
           <button 
             onClick={() => leafletMap.current?.zoomIn()}
