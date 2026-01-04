@@ -101,7 +101,7 @@ const MapView: React.FC<MapViewProps> = ({ pins, onPinClick, onMapClick }) => {
       }
       
       setIsReady(true);
-    }, 150); // Aangepast naar 150ms
+    }, 100); // 100ms vertraging
 
     return () => clearTimeout(timer);
 
@@ -109,9 +109,9 @@ const MapView: React.FC<MapViewProps> = ({ pins, onPinClick, onMapClick }) => {
 
   return (
     <div className="relative w-full h-full rounded-3xl overflow-hidden border border-white/20 shadow-2xl bg-[#f1f5f9] flex flex-col">
-      {/* Loader overlay */}
+      {/* Loader overlay - zonder animatie/transitie */}
       <div 
-        className={`absolute inset-0 z-50 bg-slate-100 flex flex-col items-center justify-center transition-opacity duration-500 ${isReady ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+        className={`absolute inset-0 z-50 bg-slate-100 flex flex-col items-center justify-center ${isReady ? 'hidden' : 'flex'}`}
       >
          <div className="w-10 h-10 border-4 border-slate-200 border-t-red-600 rounded-full animate-spin mb-3"></div>
          <span className="text-xs font-bold text-slate-400 uppercase tracking-widest animate-pulse">Kaart laden...</span>
@@ -122,8 +122,8 @@ const MapView: React.FC<MapViewProps> = ({ pins, onPinClick, onMapClick }) => {
         className="flex-1 w-full h-full z-0" 
       />
 
-      {/* Handmatige zoom knoppen */}
-      <div className={`absolute top-4 right-4 z-10 flex flex-col gap-2 transition-all duration-500 ${isReady ? 'translate-x-0 opacity-100' : 'translate-x-10 opacity-0'}`}>
+      {/* Handmatige zoom knoppen - zonder animatie */}
+      <div className={`absolute top-4 right-4 z-10 flex flex-col gap-2 ${isReady ? 'opacity-100' : 'opacity-0 hidden'}`}>
         <div className="bg-white/90 backdrop-blur-md rounded-xl border border-slate-200 flex flex-col shadow-lg overflow-hidden">
           <button 
             onClick={() => leafletMap.current?.zoomIn()}
