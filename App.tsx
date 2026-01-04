@@ -311,7 +311,7 @@ const App: React.FC = () => {
           </div>
         )}
         
-        <main className="flex-1 overflow-y-auto px-4 pb-32 scroll-smooth">
+        <main className="flex-1 overflow-y-auto px-4 pt-4 pb-32 scroll-smooth">
           {error && (
             <div className="bg-red-500/90 text-white p-4 rounded-2xl mb-6 text-sm font-bold shadow-xl animate-in fade-in zoom-in max-w-lg mx-auto border border-red-400/50">
               {error}
